@@ -40,27 +40,33 @@ def handle_tasks():
         new_task = validate_new_task(request_body)
         db.session.add(new_task)
         db.session.commit()
-        return(make_response("New Task Created!", 201))
+        return make_response({"task":new_task.to_dict()}, 201)
 
 
 @task_bp.route("/<task_id>", methods=["GET","PUT","DELETE"])
 def one_task(task_id):
     task = validate_task(task_id)
     if request.method == 'GET':
-        return make_response(task.to_dict(), 200)
+        return make_response(dict(task=task.to_dict()), 200)
     
     if request.method == 'PUT':
-        request_body = validate_new_task(request.get_json())
-
-        task.title=request_body["title"]
-        task.description=request_body["description"]
-        task.completed_at=request_body["completed_at"]
+        request_body = request.get_json()
+        if "title" in request_body:
+            task.title=request_body["title"]
+        if "description" in request_body:
+            task.description=request_body["description"]
+        if "completed_at" in request_body:
+            task.completed_at=request_body["completed_at"]
+        
 
         db.session.commit()
-        return(make_response(f"Task #{task.task_id} successfully updated", 200))
+        return(make_response({"task":task.to_dict()}, 200))
 
     if request.method == 'DELETE':
         db.session.delete(task)
         db.session.commit()
+        return make_response({"details": f'Task {task.task_id} "{task.title}" successfully deleted'},200)
 
-        return make_response(f"Task #{task.task_id} successfully deleted",200)
+        # Expected Response body Format Test Wave 1:
+        # {"details": 'Task 1 "Go on my daily walk 🏞" successfully deleted'}
+ 
