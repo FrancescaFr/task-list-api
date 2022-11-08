@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request, make_response, abort
 from app import db
 from app.models.task import Task
 from app.models.goal import Goal
+from datetime import datetime, time
 
 task_bp = Blueprint("tasks", __name__, url_prefix="/tasks")
 goal_bp = Blueprint("goals", __name__, url_prefix="/goals")
@@ -78,4 +79,17 @@ def one_task(task_id):
 
         # Expected Response body Format Test Wave 1:
         # {"details": 'Task 1 "Go on my daily walk 🏞" successfully deleted'}
- 
+
+@task_bp.route("/<task_id>/mark_complete", methods=["PATCH"])
+def check_task(task_id):
+    task = validate_task(task_id)
+    task.completed_at=datetime.now()
+    db.session.commit()
+    return make_response({"task": task.to_dict()})
+
+@task_bp.route("/<task_id>/mark_incomplete", methods=["PATCH"])
+def uncheck_task(task_id):
+    task = validate_task(task_id)
+    task.completed_at=None
+    db.session.commit()
+    return make_response({"task": task.to_dict()})
