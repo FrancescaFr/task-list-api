@@ -226,7 +226,7 @@ If the HTTP request is missing `description`, we should also get this response:
   "details": "Invalid data"
 }
 ```
-
+# should I ignore this?
 #### Missing `completed_at`
 
 If the HTTP request is missing `completed_at`, we should also get this response:

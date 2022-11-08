@@ -22,7 +22,8 @@ def validate_new_task(request_body):
     try:
         new_task = Task(title=request_body["title"],
                         description=request_body["description"],
-                        completed_at=request_body["completed_at"])
+                        #completed_at=request_body["completed_at"]
+                        )
     except:
         abort(make_response({"details": "Invalid data"},400))
     return new_task
@@ -31,7 +32,15 @@ def validate_new_task(request_body):
 @task_bp.route("", methods =["GET","POST"])
 def handle_tasks():
     if request.method == 'GET':
-        tasks = Task.query.all()
+
+        sort_query = request.args.get("sort")
+
+        if sort_query == 'asc':
+            tasks = Task.query.order_by(Task.title.asc())
+        elif sort_query == 'desc':
+            tasks = Task.query.order_by(Task.title.desc())
+        else:
+            tasks = Task.query.all()
         tasks_response = [task.to_dict() for task in tasks]
         return make_response(jsonify(tasks_response), 200)
 
