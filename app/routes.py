@@ -179,7 +179,6 @@ def one_goal(goal_id):
 #would be nice to have helper function to dictionary-ify a list of tasks
 #or.... I could just somehow have the goal store or output them in the correct format
 
-
 @goal_bp.route("/<goal_id>/tasks", methods=["GET"])
 def get_tasks_for_goal(goal_id):
     goal = validate_goal(goal_id)
