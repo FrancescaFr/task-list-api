@@ -5,6 +5,8 @@ class Goal(db.Model):
     title = db.Column(db.String)
     tasks = db.relationship("Task", back_populates="goal",lazy=True)
 
+#also maybe I should pull these dictionaries out!
+#only currently appending one task from tasks 
     def g_to_dict_tasks(self):
         task_list =[]
         for task in self.tasks:

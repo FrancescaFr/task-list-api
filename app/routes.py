@@ -186,7 +186,7 @@ def get_tasks_for_goal(goal_id):
     goal_response = goal.g_to_dict_tasks()
     return make_response(jsonify(goal_response), 200)
 
-
+# need to get it listing more than one task! 
 @goal_bp.route("/<goal_id>/tasks", methods=["POST"])
 def add_tasks(goal_id):
     goal = validate_goal(goal_id)
