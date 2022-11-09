@@ -95,7 +95,7 @@ def check_task(task_id):
     Headers = {"Authorization" : f'Bearer {token}'}
     params = {'channel':'task-notifications','text': f'Someone just completed the task {task.title}'}
     requests.post(URL,headers=Headers,params=params)
-    
+
     return make_response({"task": task.to_dict()})
 
 @task_bp.route("/<task_id>/mark_incomplete", methods=["PATCH"])
@@ -104,3 +104,71 @@ def uncheck_task(task_id):
     task.completed_at=None
     db.session.commit()
     return make_response({"task": task.to_dict()})
+
+
+#####################################################
+#------------------GOAL ROUTES----------------------#
+#####################################################
+
+
+def validate_goal(id):
+    try:
+        id = int(id)
+    except:
+        abort(make_response({"message": f"Goal {id} is invalid"}, 400))
+
+    goal = Goal.query.get(id)
+    if not goal:
+        abort(make_response({"message": f"Goal {id} not found"}, 404))
+    return goal
+
+def validate_new_goal(request_body):
+    try:
+        new_goal = Goal(title=request_body["title"])
+    except:
+        abort(make_response({"details": "Invalid data"},400))
+    return new_goal
+
+
+@goal_bp.route("", methods =["GET","POST"])
+def handle_goals():
+    if request.method == 'GET':
+
+        sort_query = request.args.get("sort")
+
+        if sort_query == 'asc':
+            goals = Goal.query.order_by(Goal.title.asc())
+        elif sort_query == 'desc':
+            goals = Goal.query.order_by(Goal.title.desc())
+        else:
+            goals = Goal.query.all()
+        goals_response = [goal.g_to_dict() for goal in goals]
+        return make_response(jsonify(goals_response), 200)
+
+    if request.method == 'POST':
+        request_body = request.get_json()
+        new_goal = validate_new_goal(request_body)
+        db.session.add(new_goal)
+        db.session.commit()
+        return make_response({"goal":new_goal.g_to_dict()}, 201)
+
+
+@goal_bp.route("/<goal_id>", methods=["GET","PUT","DELETE"])
+def one_goal(goal_id):
+    goal = validate_goal(goal_id)
+    if request.method == 'GET':
+        return make_response(dict(goal=goal.g_to_dict()), 200)
+    
+    if request.method == 'PUT':
+        request_body = request.get_json()
+        if "title" in request_body:
+            goal.title=request_body["title"]
+
+        db.session.commit()
+        return(make_response({"goal":goal.g_to_dict()}, 200))
+
+    if request.method == 'DELETE':
+        db.session.delete(goal)
+        db.session.commit()
+        return make_response({"details": f'Goal {goal.goal_id} "{goal.title}" successfully deleted'},200)
+
