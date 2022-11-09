@@ -3,6 +3,9 @@ from app import db
 from app.models.task import Task
 from app.models.goal import Goal
 from datetime import datetime, time
+import requests
+import os
+from dotenv import load_dotenv
 
 task_bp = Blueprint("tasks", __name__, url_prefix="/tasks")
 goal_bp = Blueprint("goals", __name__, url_prefix="/goals")
@@ -85,6 +88,14 @@ def check_task(task_id):
     task = validate_task(task_id)
     task.completed_at=datetime.now()
     db.session.commit()
+
+    # Notify Slack of Task Completion
+    URL = "https://slack.com/api/chat.postMessage"
+    token = os.environ.get('SLACK_TOKEN')
+    Headers = {"Authorization" : f'Bearer {token}'}
+    params = {'channel':'task-notifications','text': f'Someone just completed the task {task.title}'}
+    requests.post(URL,headers=Headers,params=params)
+    
     return make_response({"task": task.to_dict()})
 
 @task_bp.route("/<task_id>/mark_incomplete", methods=["PATCH"])
