@@ -12,11 +12,11 @@ class Goal(db.Model):
         for task in self.tasks:
             task_list.append(task_to_dict(task))
 
-            return dict(
-                    id=self.goal_id,
-                    title=self.title,
-                    tasks=task_list
-                )
+        return dict(
+                id=self.goal_id,
+                title=self.title,
+                tasks=task_list
+            )
 
     def g_to_dict(self):
         return dict(

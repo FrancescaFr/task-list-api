@@ -15,44 +15,40 @@ goal_bp = Blueprint("goals", __name__, url_prefix="/goals")
 ##-----------------------------------------------------------------##
 
 ## TO DO: Consolidate helper functions
-def validate_task(id):
+def validate_item(cls,id):
     try:
         id = int(id)
     except:
-        abort(make_response({"message": f"Task {id} is invalid"}, 400))
+        abort(make_response({"message": f"{cls.__name__} {id} is invalid"}, 400))
 
-    task = Task.query.get(id)
-    if not task:
-        abort(make_response({"message": f"Task {id} not found"}, 404))
-    return task
+    item = cls.query.get(id)
+    if not item:
+        abort(make_response({"message": f"{cls.__name__} {id} not found"}, 404))
+    return item
 
-def validate_new_task(request_body):
-    try:
-        new_task = Task(title=request_body["title"],
-                        description=request_body["description"],
-                        #completed_at=request_body["completed_at"]
+def validate_new_item(cls,request_body):
+    try:  
+        if cls == Task:
+            new_item = cls(title=request_body["title"],
+                            description=request_body["description"]
+                        )
+        else:
+             new_item = cls(title=request_body["title"]
                         )
     except:
         abort(make_response({"details": "Invalid data"},400))
-    return new_task
+    return new_item
 
-def validate_goal(id):
-    try:
-        id = int(id)
-    except:
-        abort(make_response({"message": f"Goal {id} is invalid"}, 400))
+# def validate_goal(id):
+#     try:
+#         id = int(id)
+#     except:
+#         abort(make_response({"message": f"Goal {id} is invalid"}, 400))
 
-    goal = Goal.query.get(id)
-    if not goal:
-        abort(make_response({"message": f"Goal {id} not found"}, 404))
-    return goal
-
-def validate_new_goal(request_body):
-    try:
-        new_goal = Goal(title=request_body["title"])
-    except:
-        abort(make_response({"details": "Invalid data"},400))
-    return new_goal
+#     goal = Goal.query.get(id)
+#     if not goal:
+#         abort(make_response({"message": f"Goal {id} not found"}, 404))
+#     return goal
 
 #---------------------------------------------------------------#
 #-------------------------TASK ROUTES---------------------------#
@@ -77,7 +73,7 @@ def get_tasks():
 @task_bp.route("", methods =["POST"])
 def make_task():
     request_body = request.get_json()
-    new_task = validate_new_task(request_body)
+    new_task = validate_new_item(Task,request_body)
     db.session.add(new_task)
     db.session.commit()
     return make_response({"task":new_task.to_dict()}, 201)
@@ -85,13 +81,13 @@ def make_task():
 #-------------GET SINGLE TASK ------------#
 @task_bp.route("/<task_id>", methods=["GET"])
 def get_one_task(task_id):
-    task = validate_task(task_id)
+    task = validate_item(Task,task_id)
     return make_response(dict(task=task.to_dict()), 200)                  
 
 #-------------EDIT SINGLE TASK ------------#
 @task_bp.route("/<task_id>", methods=["PUT"])
 def edit_one_task(task_id):
-    task = validate_task(task_id)
+    task = validate_item(Task,task_id)
     request_body = request.get_json()
 
     if "title" in request_body:
@@ -107,7 +103,7 @@ def edit_one_task(task_id):
 #-------------DELETE SINGLE TASK ------------#
 @task_bp.route("/<task_id>", methods=["DELETE"])
 def delete_one_task(task_id):
-    task = validate_task(task_id)
+    task = validate_item(Task,task_id)
     db.session.delete(task)
     db.session.commit()
     return make_response({"details": f'Task {task.task_id} "{task.title}" successfully deleted'},200)
@@ -117,7 +113,7 @@ def delete_one_task(task_id):
 #-------------MARK TASK COMPLETE------------#
 @task_bp.route("/<task_id>/mark_complete", methods=["PATCH"])
 def check_task(task_id):
-    task = validate_task(task_id)
+    task = validate_item(Task,task_id)
     task.completed_at=datetime.now()
     db.session.commit()
 
@@ -133,7 +129,7 @@ def check_task(task_id):
 #------------MARK TASK INCOMPLETE-----------#
 @task_bp.route("/<task_id>/mark_incomplete", methods=["PATCH"])
 def uncheck_task(task_id):
-    task = validate_task(task_id)
+    task = validate_item(Task,task_id)
     task.completed_at=None
     db.session.commit()
     return make_response({"task": task.to_dict()})
@@ -162,7 +158,7 @@ def get_goals():
 @goal_bp.route("", methods =["POST"])
 def make_goal():
     request_body = request.get_json()
-    new_goal = validate_new_goal(request_body)
+    new_goal = validate_new_item(Goal,request_body)
     db.session.add(new_goal)
     db.session.commit()
     return make_response({"goal":new_goal.g_to_dict()}, 201)
@@ -170,14 +166,14 @@ def make_goal():
 #-------------GET SINGLE GOAL------------#
 @goal_bp.route("/<goal_id>", methods=["GET"])
 def one_goal(goal_id):
-    goal = validate_goal(goal_id)
+    goal = validate_item(Goal,goal_id)
     if request.method == 'GET':
         return make_response(dict(goal=goal.g_to_dict()), 200)
 
 #-------------EDIT SINGLE GOAL-------------#
 @goal_bp.route("/<goal_id>", methods=["PUT"])
 def edit_goal(goal_id):
-    goal = validate_goal(goal_id)
+    goal = validate_item(Goal,goal_id)
     request_body = request.get_json()
     if "title" in request_body:
         goal.title=request_body["title"]
@@ -190,7 +186,7 @@ def edit_goal(goal_id):
 #-------------DELETE SINGLE GOAL-------------#
 @goal_bp.route("/<goal_id>", methods=["DELETE"])
 def delete_goal(goal_id):
-    goal = validate_goal(goal_id)
+    goal = validate_item(Goal,goal_id)
     db.session.delete(goal)
     db.session.commit()
     return make_response({"details": f'Goal {goal.goal_id} "{goal.title}" successfully deleted'},200)
@@ -205,7 +201,7 @@ def delete_goal(goal_id):
 
 @goal_bp.route("/<goal_id>/tasks", methods=["GET"])
 def get_tasks_for_goal(goal_id):
-    goal = validate_goal(goal_id)
+    goal = validate_item(Goal,goal_id)
     #need dictionary formatted task to be returned, not raw task
     goal_response = goal.g_to_dict_tasks()
     return make_response(jsonify(goal_response), 200)
@@ -214,11 +210,11 @@ def get_tasks_for_goal(goal_id):
 #---------------ADD TASKS TO GOAL--------------#
 @goal_bp.route("/<goal_id>/tasks", methods=["POST"])
 def add_tasks(goal_id):
-    goal = validate_goal(goal_id)
+    goal = validate_item(Goal,goal_id)
     request_body = request.get_json()
     if "task_ids" in request_body:
         for id in request_body["task_ids"]:
-            task = validate_task(id)
+            task = validate_item(Task,id)
             task.goal_id=goal.goal_id       
     else:
         abort(make_response({"details": "Invalid data"},400))

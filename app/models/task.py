@@ -18,12 +18,19 @@ class Task(db.Model):
             check_status = True
         else:
             check_status = False
-
-        return dict(
+        if self.goal_id:
+            return dict(
                     id=self.task_id,
                     title=self.title,
                     description=self.description,
                     goal_id=self.goal_id,
+                    is_complete=check_status
+                )
+        
+        return dict(
+                    id=self.task_id,
+                    title=self.title,
+                    description=self.description,
                     is_complete=check_status
                 )
         
