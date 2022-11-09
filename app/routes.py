@@ -5,7 +5,7 @@ from app.models.goal import Goal
 from datetime import datetime, time
 import requests
 import os
-from dotenv import load_dotenv
+#from dotenv import load_dotenv # not sure if I need this here, since it's in init 
 
 task_bp = Blueprint("tasks", __name__, url_prefix="/tasks")
 goal_bp = Blueprint("goals", __name__, url_prefix="/goals")
@@ -133,6 +133,7 @@ def validate_new_goal(request_body):
 @goal_bp.route("", methods =["GET","POST"])
 def handle_goals():
     if request.method == 'GET':
+    #maybe pull queries out into helper function to apply to multiple routes later
 
         sort_query = request.args.get("sort")
 
@@ -172,3 +173,47 @@ def one_goal(goal_id):
         db.session.commit()
         return make_response({"details": f'Goal {goal.goal_id} "{goal.title}" successfully deleted'},200)
 
+#####################################################
+#-----------------NESTED ROUTES---------------------#
+#####################################################
+#would be nice to have helper function to dictionary-ify a list of tasks
+#or.... I could just somehow have the goal store or output them in the correct format
+
+
+@goal_bp.route("/<goal_id>/tasks", methods=["GET"])
+def get_tasks_for_goal(goal_id):
+    goal = validate_goal(goal_id)
+    #need dictionary formatted task to be returned, not raw task
+    goal_response = goal.g_to_dict_tasks()
+    return make_response(jsonify(goal_response), 200)
+
+
+@goal_bp.route("/<goal_id>/tasks", methods=["POST"])
+def add_tasks(goal_id):
+    goal = validate_goal(goal_id)
+    request_body = request.get_json()
+    if "task_ids" in request_body:
+        for id in request_body["task_ids"]:
+            task = validate_task(id)
+            task.goal_id=goal.goal_id       
+    else:
+        abort(make_response({"details": "Invalid data"},400))
+    db.session.commit()
+
+    #confirm that tasks were linked in database- there has to be a better way to check this
+    new_goal_tasks = []
+    for id in request_body["task_ids"]:
+        if task.goal_id == goal.goal_id:
+            new_goal_tasks.append(id)
+
+    return make_response({"id": goal.goal_id, "task_ids": new_goal_tasks},200)
+
+
+    # Do we assign the goal id to all the listed tasks, or do we assign the task list to goal?
+    # tasks have a goal id value, which is an integer, so probably the latter
+    # then need to figure out how to retrieve the task IDs from goal 
+    # Desired response message:
+    # {
+    #  "id": 1,
+    #   "task_ids": [1, 2, 3]
+    #   },200)
