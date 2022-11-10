@@ -47,7 +47,7 @@ def post_to_slack(task):
     params = {'channel':'task-notifications',
               'text': f'Someone just completed the task {task.title}'
             }
-
+    # Ansel said something about making sure to send object as JSON...?
     requests.post(URL,headers=Headers,params=params)
 
 def task_to_goal(task_id,goal):
@@ -64,6 +64,7 @@ def to_dict(self,list_tasks=False):
         item_dict["title"]=self.title
         item_dict["description"]=self.description
 
+        # possibly can consolidate? / tie the two variables together  / create a database columm?
         if self.completed_at != None:
             item_dict["is_complete"]=True
         else:
@@ -88,7 +89,8 @@ def query_filter(cls):
     sort_query = request.args.get("sort")
     filter_query = request.args.get("filter")
     by = request.args.get("by")
-
+    ## apply Kae's recommendation of a dictionary and splat operator to simplify!!
+    ## better order by solution available as well (ex. Katherine)
     if sort_query:
         if sort_query == 'asc' or sort_query != 'desc':
             if not by or by == 'title':
@@ -171,7 +173,7 @@ def delete_one_task(task_id):
     db.session.delete(task)
     db.session.commit()
 
-    return make_response({"details": f'Task {task.task_id} "{task.title}" successfully deleted'},200)
+    return make_response({"details": f'Task {task.task_id} """{task.title}"""successfully deleted'},200)
 
 #-------------MARK TASK COMPLETE------------#
 @task_bp.route("/<task_id>/mark_complete", methods=["PATCH"])
@@ -248,7 +250,7 @@ def delete_goal(goal_id):
     db.session.delete(goal)
     db.session.commit()
 
-    return make_response({"details": f'Goal {goal.goal_id} "{goal.title}" successfully deleted'},200)
+    return make_response({"details": f'Goal {goal.goal_id} """{goal.title}""" successfully deleted'},200)
 
 #---------------------------------------------------------------#
 #-----------------------NESTED ROUTES---------------------------#
@@ -278,3 +280,16 @@ def add_tasks(goal_id):
 
     return make_response({"id": goal.goal_id, "task_ids": task_list},200)
 
+# Annie's more compact implementation of add tasks to goal:
+# goal.tasks += Task.query.filter(Task.task_id.in_(request_body["task_ids"]).all())
+# - use relationship - adding to goal.tasks updates task table values, not goal table values
+
+# Kae made a helper function to validate json data
+
+# - This checks both key and values
+# validate_json(request, ["title"])
+
+# ...in validate helper function
+# for f in required_fields:
+#     if not request_data.get(f):
+#         missing_fields.append(f)
