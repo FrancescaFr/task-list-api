@@ -46,57 +46,32 @@ def post_to_slack(task):
     requests.post(URL,headers=Headers,params=params)
 
 def to_dict(self,list_tasks=False):
+    item_dict = {} 
+
     if self.__class__ == Task:
+        item_dict["id"]=self.task_id
+        item_dict["title"] = self.title
+        item_dict["description"]=self.description
+
         if self.completed_at != None:
-            check_status = True
+            item_dict["is_complete"] = True
         else:
-            check_status = False
+            item_dict["is_complete"] = False
+
         if self.goal_id:
-            return dict(
-                    id=self.task_id,
-                    title=self.title,
-                    description=self.description,
-                    goal_id=self.goal_id,
-                    is_complete=check_status
-                )
+            item_dict["goal_id"] = self.goal_id
         
-        return dict(
-                    id=self.task_id,
-                    title=self.title,
-                    description=self.description,
-                    is_complete=check_status
-                )
-    if self.__class__==Goal:
+    if self.__class__ == Goal:
+        item_dict["id"]=self.goal_id
+        item_dict["title"] = self.title
 
         if list_tasks==True:
             task_list =[]
             for task in self.tasks:
-                task_list.append(task_to_dict(task))
+                task_list.append(to_dict(task)) # recursion baby!
+            item_dict["tasks"]=task_list
 
-            return dict(
-                    id=self.goal_id,
-                    title=self.title,
-                    tasks=task_list
-                )
-
-        return dict(
-                    id=self.goal_id,
-                    title=self.title
-                )
-
-def task_to_dict(task):
-            if task.completed_at != None:
-                check_status = True
-            else:
-                check_status = False
-
-            return dict(
-                        id=task.task_id,
-                        title=task.title,
-                        description=task.description,
-                        goal_id=task.goal_id,
-                        is_complete=check_status
-                    )
+    return item_dict
 
 #---------------------------------------------------------------#
 #-------------------------TASK ROUTES---------------------------#
