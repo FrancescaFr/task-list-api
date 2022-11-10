@@ -1,10 +1,12 @@
-from flask import Blueprint, jsonify, request, make_response, abort
-from app import db
-from app.models.task import Task
-from app.models.goal import Goal
-from datetime import datetime
-import requests
 import os
+from datetime import datetime
+
+import requests
+from flask import Blueprint, abort, jsonify, make_response, request
+
+from app import db
+from app.models.goal import Goal
+from app.models.task import Task
 
 task_bp = Blueprint("tasks", __name__, url_prefix="/tasks")
 goal_bp = Blueprint("goals", __name__, url_prefix="/goals")
@@ -48,6 +50,12 @@ def post_to_slack(task):
 
     requests.post(URL,headers=Headers,params=params)
 
+def task_to_goal(task_id,goal):
+    task = validate_item(Task,task_id)
+    task.goal_id=goal.goal_id
+
+    return task_id
+
 def to_dict(self,list_tasks=False):
     item_dict = {} 
 
@@ -78,13 +86,35 @@ def to_dict(self,list_tasks=False):
 
 def query_filter(cls):
     sort_query = request.args.get("sort")
+    filter_query = request.args.get("filter")
+    by = request.args.get("by")
 
-    if sort_query == 'asc':
-        results = cls.query.order_by(cls.title.asc())
-    elif sort_query == 'desc':
-        results = cls.query.order_by(cls.title.desc())
+    if sort_query:
+        if sort_query == 'asc' or sort_query != 'desc':
+            if not by or by == 'title':
+                order = cls.title.asc
+            if by == 'goal':
+                order = cls.goal_id.asc
+            if by == 'date':
+                order = cls.completed_at.asc
+        if sort_query == 'desc':
+            if not by or by == 'title':
+                order = cls.title.desc
+            if by == 'goal':
+                order = cls.goal_id.desc
+            if by == 'date':
+                order = cls.completed_at.desc
+
+        results = cls.query.order_by(order())
     else:
         results = cls.query.all()
+
+    if filter_query:
+        if filter_query == 'todo':
+            results = results.filter(Task.completed_at == None)
+        if filter_query == 'done':
+            results = results.filter(Task.completed_at != None)
+
     return results
 
 #---------------------------------------------------------------#
@@ -240,12 +270,11 @@ def add_tasks(goal_id):
     request_body = request.get_json()
     
     if "task_ids" in request_body:
-        for id in request_body["task_ids"]:
-            task = validate_item(Task,id)
-            task.goal_id=goal.goal_id  
+        task_list = [task_to_goal(id,goal) for id in request_body["task_ids"]]
     else:
         abort(make_response({"details": "Invalid data"},400))
 
     db.session.commit()
 
-    return make_response({"id": goal.goal_id, "task_ids": request_body["task_ids"]},200)
+    return make_response({"id": goal.goal_id, "task_ids": task_list},200)
+
