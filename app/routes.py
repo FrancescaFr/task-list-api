@@ -107,7 +107,7 @@ def query_filter(cls):
 
         results = cls.query.order_by(order())
     else:
-        results = cls.query.all()
+        results = cls.query
 
     if filter_query:
         if filter_query == 'todo':
