@@ -73,6 +73,17 @@ def to_dict(self,list_tasks=False):
 
     return item_dict
 
+def query_filter(cls):
+    sort_query = request.args.get("sort")
+
+    if sort_query == 'asc':
+        results = cls.query.order_by(cls.title.asc())
+    elif sort_query == 'desc':
+        results = cls.query.order_by(cls.title.desc())
+    else:
+        results = cls.query.all()
+    return results
+
 #---------------------------------------------------------------#
 #-------------------------TASK ROUTES---------------------------#
 #---------------------------------------------------------------#
@@ -80,15 +91,7 @@ def to_dict(self,list_tasks=False):
 #-------------GET ALL TASKS------------#
 @task_bp.route("", methods =["GET"])
 def get_tasks():
-    #maybe pull queries out into helper function to apply to multiple routes? (Goal/Tasks)
-    sort_query = request.args.get("sort")
-
-    if sort_query == 'asc':
-        tasks = Task.query.order_by(Task.title.asc())
-    elif sort_query == 'desc':
-        tasks = Task.query.order_by(Task.title.desc())
-    else:
-        tasks = Task.query.all()
+    tasks = query_filter(Task)
     tasks_response = [to_dict(task) for task in tasks]
     return make_response(jsonify(tasks_response), 200)
 
@@ -161,15 +164,7 @@ def uncheck_task(task_id):
 #-------------GET ALL GOALS------------#
 @goal_bp.route("", methods =["GET"])
 def get_goals():
-    sort_query = request.args.get("sort")
-
-    if sort_query == 'asc':
-        goals = Goal.query.order_by(Goal.title.asc())
-    elif sort_query == 'desc':
-        goals = Goal.query.order_by(Goal.title.desc())
-    else:
-        goals = Goal.query.all()
-
+    goals = query_filter(Goal)
     goals_response = [to_dict(goal) for goal in goals]
     return make_response(jsonify(goals_response), 200)
 
