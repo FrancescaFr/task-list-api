@@ -13,24 +13,24 @@ class Task(db.Model):
         # would like to be able to reference in other class methods
         # can I do that without including in arguments?
 
-    def to_dict(self):
-        if self.completed_at != None:
-            check_status = True
-        else:
-            check_status = False
-        if self.goal_id:
-            return dict(
-                    id=self.task_id,
-                    title=self.title,
-                    description=self.description,
-                    goal_id=self.goal_id,
-                    is_complete=check_status
-                )
+    # def to_dict(self):
+    #     if self.completed_at != None:
+    #         check_status = True
+    #     else:
+    #         check_status = False
+    #     if self.goal_id:
+    #         return dict(
+    #                 id=self.task_id,
+    #                 title=self.title,
+    #                 description=self.description,
+    #                 goal_id=self.goal_id,
+    #                 is_complete=check_status
+    #             )
         
-        return dict(
-                    id=self.task_id,
-                    title=self.title,
-                    description=self.description,
-                    is_complete=check_status
-                )
+    #     return dict(
+    #                 id=self.task_id,
+    #                 title=self.title,
+    #                 description=self.description,
+    #                 is_complete=check_status
+    #             )
         

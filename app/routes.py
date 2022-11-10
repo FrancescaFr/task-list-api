@@ -14,7 +14,6 @@ goal_bp = Blueprint("goals", __name__, url_prefix="/goals")
 ##--------------------------Helper Functions-----------------------##
 ##-----------------------------------------------------------------##
 
-## TO DO: Consolidate helper functions
 def validate_item(cls,id):
     try:
         id = int(id)
@@ -39,16 +38,65 @@ def validate_new_item(cls,request_body):
         abort(make_response({"details": "Invalid data"},400))
     return new_item
 
-# def validate_goal(id):
-#     try:
-#         id = int(id)
-#     except:
-#         abort(make_response({"message": f"Goal {id} is invalid"}, 400))
+def post_to_slack(task):
+    URL = "https://slack.com/api/chat.postMessage"
+    token = os.environ.get('SLACK_TOKEN')
+    Headers = {"Authorization" : f'Bearer {token}'}
+    params = {'channel':'task-notifications','text': f'Someone just completed the task {task.title}'}
+    requests.post(URL,headers=Headers,params=params)
 
-#     goal = Goal.query.get(id)
-#     if not goal:
-#         abort(make_response({"message": f"Goal {id} not found"}, 404))
-#     return goal
+def to_dict(self,list_tasks=False):
+    if self.__class__ == Task:
+        if self.completed_at != None:
+            check_status = True
+        else:
+            check_status = False
+        if self.goal_id:
+            return dict(
+                    id=self.task_id,
+                    title=self.title,
+                    description=self.description,
+                    goal_id=self.goal_id,
+                    is_complete=check_status
+                )
+        
+        return dict(
+                    id=self.task_id,
+                    title=self.title,
+                    description=self.description,
+                    is_complete=check_status
+                )
+    if self.__class__==Goal:
+
+        if list_tasks==True:
+            task_list =[]
+            for task in self.tasks:
+                task_list.append(task_to_dict(task))
+
+            return dict(
+                    id=self.goal_id,
+                    title=self.title,
+                    tasks=task_list
+                )
+
+        return dict(
+                    id=self.goal_id,
+                    title=self.title
+                )
+
+def task_to_dict(task):
+            if task.completed_at != None:
+                check_status = True
+            else:
+                check_status = False
+
+            return dict(
+                        id=task.task_id,
+                        title=task.title,
+                        description=task.description,
+                        goal_id=task.goal_id,
+                        is_complete=check_status
+                    )
 
 #---------------------------------------------------------------#
 #-------------------------TASK ROUTES---------------------------#
@@ -66,7 +114,7 @@ def get_tasks():
         tasks = Task.query.order_by(Task.title.desc())
     else:
         tasks = Task.query.all()
-    tasks_response = [task.to_dict() for task in tasks]
+    tasks_response = [to_dict(task) for task in tasks]
     return make_response(jsonify(tasks_response), 200)
 
 #-------------MAKE NEW TASK ------------#
@@ -76,13 +124,13 @@ def make_task():
     new_task = validate_new_item(Task,request_body)
     db.session.add(new_task)
     db.session.commit()
-    return make_response({"task":new_task.to_dict()}, 201)
+    return make_response({"task":to_dict(new_task)}, 201)
 
 #-------------GET SINGLE TASK ------------#
 @task_bp.route("/<task_id>", methods=["GET"])
 def get_one_task(task_id):
     task = validate_item(Task,task_id)
-    return make_response(dict(task=task.to_dict()), 200)                  
+    return make_response(dict(task=to_dict(task)), 200)                  
 
 #-------------EDIT SINGLE TASK ------------#
 @task_bp.route("/<task_id>", methods=["PUT"])
@@ -98,7 +146,7 @@ def edit_one_task(task_id):
         task.completed_at=request_body["completed_at"]
     
     db.session.commit()
-    return(make_response({"task":task.to_dict()}, 200))
+    return(make_response({"task":to_dict(task)}, 200))
 
 #-------------DELETE SINGLE TASK ------------#
 @task_bp.route("/<task_id>", methods=["DELETE"])
@@ -118,13 +166,9 @@ def check_task(task_id):
     db.session.commit()
 
     # Notify Slack of Task Completion - pull out into own function?
-    URL = "https://slack.com/api/chat.postMessage"
-    token = os.environ.get('SLACK_TOKEN')
-    Headers = {"Authorization" : f'Bearer {token}'}
-    params = {'channel':'task-notifications','text': f'Someone just completed the task {task.title}'}
-    requests.post(URL,headers=Headers,params=params)
+    post_to_slack(task)
 
-    return make_response({"task": task.to_dict()})
+    return make_response({"task": to_dict(task)})
 
 #------------MARK TASK INCOMPLETE-----------#
 @task_bp.route("/<task_id>/mark_incomplete", methods=["PATCH"])
@@ -132,7 +176,7 @@ def uncheck_task(task_id):
     task = validate_item(Task,task_id)
     task.completed_at=None
     db.session.commit()
-    return make_response({"task": task.to_dict()})
+    return make_response({"task": to_dict(task)})
 
 
 #---------------------------------------------------------------#
@@ -151,7 +195,7 @@ def get_goals():
     else:
         goals = Goal.query.all()
 
-    goals_response = [goal.g_to_dict() for goal in goals]
+    goals_response = [to_dict(goal) for goal in goals]
     return make_response(jsonify(goals_response), 200)
 
 #-------------MAKE NEW GOAL-------------#
@@ -161,14 +205,14 @@ def make_goal():
     new_goal = validate_new_item(Goal,request_body)
     db.session.add(new_goal)
     db.session.commit()
-    return make_response({"goal":new_goal.g_to_dict()}, 201)
+    return make_response({"goal":to_dict(new_goal)}, 201)
 
 #-------------GET SINGLE GOAL------------#
 @goal_bp.route("/<goal_id>", methods=["GET"])
 def one_goal(goal_id):
     goal = validate_item(Goal,goal_id)
     if request.method == 'GET':
-        return make_response(dict(goal=goal.g_to_dict()), 200)
+        return make_response(dict(goal=to_dict(goal)), 200)
 
 #-------------EDIT SINGLE GOAL-------------#
 @goal_bp.route("/<goal_id>", methods=["PUT"])
@@ -181,7 +225,7 @@ def edit_goal(goal_id):
         goal.description=request_body["description"]
 
     db.session.commit()
-    return(make_response({"goal":goal.g_to_dict()}, 200))
+    return(make_response({"goal":to_dict(goal)}, 200))
 
 #-------------DELETE SINGLE GOAL-------------#
 @goal_bp.route("/<goal_id>", methods=["DELETE"])
@@ -203,7 +247,7 @@ def delete_goal(goal_id):
 def get_tasks_for_goal(goal_id):
     goal = validate_item(Goal,goal_id)
     #need dictionary formatted task to be returned, not raw task
-    goal_response = goal.g_to_dict_tasks()
+    goal_response = to_dict(goal,list_tasks=True)
     return make_response(jsonify(goal_response), 200)
     # need to get it listing more than one task!
 
